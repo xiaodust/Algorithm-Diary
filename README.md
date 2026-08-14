@@ -8,6 +8,21 @@
 - 前端：React 18 + Vite + Tailwind CSS
 - LeetCode：leetcode.cn GraphQL
 
+## 桌面端与安装包
+
+项目支持以 JavaFX 原生窗口运行，不再依赖命令行启动。Windows 安装包可从 Release 下载：
+
+- [Latest Release](https://github.com/xiaodust/Algorithm-Diary/releases/latest)
+
+本地构建安装包：
+
+```powershell
+cd backend
+mvn.cmd -Pdesktop -DskipTests package
+```
+
+构建完成后，使用 `jpackage` 生成 `AlgorithmDiary-<version>.exe`。桌面端启动后会自动在后台运行 Spring Boot 服务，并在系统默认浏览器中打开题目链接。
+
 ## 运行
 
 一键启动：

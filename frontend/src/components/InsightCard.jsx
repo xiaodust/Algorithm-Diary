@@ -1,3 +1,5 @@
+import MarkdownText from './MarkdownText.jsx';
+
 export default function InsightCard({ insight, onRefreshInsight }) {
   if (!insight) {
     return null;
@@ -14,7 +16,7 @@ export default function InsightCard({ insight, onRefreshInsight }) {
           刷新周报
         </button>
       </div>
-      <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">{insight}</p>
+      <MarkdownText content={insight} />
     </section>
   );
 }

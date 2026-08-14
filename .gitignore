@@ -22,6 +22,11 @@ Thumbs.db
 
 # Java / Maven
 backend/target/
+backend/installer-out/
+backend/jpackage-input/
+backend/jpackage-temp/
+backend/src/main/resources/static/
+dist/
 
 # Node
 frontend/node_modules/
