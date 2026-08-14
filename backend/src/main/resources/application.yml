@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:sqlite:${APP_DATA_DIR:./data}/algo.db
+    driver-class-name: org.sqlite.JDBC
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: 8081
+
+algodiary:
+  leetcode:
+    graphql-url: ${LEETCODE_GRAPHQL_URL:https://leetcode.cn/graphql/}
+    session: ${LEETCODE_SESSION:}
+    csrf-token: ${LEETCODE_CSRF_TOKEN:}
+    cf-clearance: ${LEETCODE_CF_CLEARANCE:}
+  llm:
+    api-key: ${OPENAI_API_KEY:}
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    model: ${OPENAI_MODEL:gpt-4o-mini}

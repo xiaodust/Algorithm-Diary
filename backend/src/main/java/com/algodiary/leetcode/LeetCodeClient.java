@@ -1,0 +1,284 @@
+package com.algodiary.leetcode;
+
+import com.algodiary.config.LeetCodeProperties;
+import com.algodiary.config.LeetCodeCredentials;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@Component
+public class LeetCodeClient {
+
+    private static final Logger log = LoggerFactory.getLogger(LeetCodeClient.class);
+    private static final String BROWSER_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+    private static final String ORIGIN = "https://leetcode.cn";
+
+    private final RestClient restClient;
+    private final LeetCodeProperties properties;
+    private final LeetCodeCredentials credentials;
+
+    public LeetCodeClient(RestClient.Builder builder, LeetCodeProperties properties, LeetCodeCredentials credentials) {
+        this.restClient = builder.baseUrl(properties.graphqlUrl()).build();
+        this.properties = properties;
+        this.credentials = credentials;
+    }
+
+    public List<UserProgressQuestion> fetchUserProgress() {
+        Map<String, Object> variables = Map.of(
+                "filters", Map.of("skip", 0, "limit", 4000)
+        );
+        JsonNode data = postGraphQL(
+                "userProgressQuestionList",
+                """
+                query userProgressQuestionList($filters: UserProgressQuestionListInput) {
+                  userProgressQuestionList(filters: $filters) {
+                    questions {
+                      frontendId
+                      title
+                      translatedTitle
+                      titleSlug
+                      questionStatus
+                      lastResult
+                      lastSubmittedAt
+                    }
+                  }
+                }
+                """,
+                variables
+        );
+        return parseUserProgress(data.path("data"));
+    }
+
+    public SubmissionPage fetchSubmissionsPage(int offset, int limit, String lastKey) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("offset", offset);
+        variables.put("limit", limit);
+        variables.put("lastKey", lastKey);
+        variables.put("questionSlug", null);
+
+        JsonNode data = postGraphQL(
+                "submissionList",
+                """
+                query submissionList($offset: Int!, $limit: Int!, $lastKey: String, $questionSlug: String) {
+                  submissionList(offset: $offset, limit: $limit, lastKey: $lastKey, questionSlug: $questionSlug) {
+                    lastKey
+                    hasNext
+                    submissions {
+                      id
+                      title
+                      status
+                      lang
+                      frontendId
+                      url
+                      timestamp
+                    }
+                  }
+                }
+                """,
+                variables
+        );
+        return parseSubmissionPage(data.path("data"));
+    }
+
+    public Optional<DailyChallenge> fetchDailyChallenge() {
+        JsonNode data = postGraphQL(
+                "activeDailyCodingChallengeQuestion",
+                """
+                query questionOfToday {
+                  activeDailyCodingChallengeQuestion {
+                    date
+                    link
+                    question {
+                      titleSlug
+                      title
+                      difficulty
+                    }
+                  }
+                }
+                """,
+                Map.of()
+        );
+        JsonNode node = data.path("data").path("activeDailyCodingChallengeQuestion");
+        if (node.isMissingNode() || node.isNull()) {
+            return Optional.empty();
+        }
+        JsonNode question = node.path("question");
+        return Optional.of(new DailyChallenge(
+                node.path("date").asText(null),
+                node.path("link").asText(null),
+                question.path("titleSlug").asText(null),
+                question.path("title").asText(null),
+                question.path("difficulty").asText(null)
+        ));
+    }
+
+    public Optional<ProblemInfo> fetchProblem(String titleSlug) {
+        JsonNode data = postGraphQL(
+                "questionData",
+                """
+                query questionData($titleSlug: String!) {
+                  question(titleSlug: $titleSlug) {
+                    title
+                    titleSlug
+                    difficulty
+                    topicTags { slug }
+                  }
+                }
+                """,
+                Map.of("titleSlug", titleSlug)
+        );
+        JsonNode question = data.path("data").path("question");
+        if (question.isMissingNode() || question.isNull()) {
+            return Optional.empty();
+        }
+        List<String> tags = new ArrayList<>();
+        question.path("topicTags").forEach(tag -> tags.add(tag.path("slug").asText(null)));
+        return Optional.of(new ProblemInfo(
+                question.path("titleSlug").asText(titleSlug),
+                question.path("title").asText(null),
+                question.path("difficulty").asText(null),
+                tags
+        ));
+    }
+
+    public StudyPlanSummary fetchStudyPlan(String planSlug) {
+        JsonNode data = postGraphQL(
+                "studyPlanV2Detail",
+                """
+                query studyPlanV2Detail($planSlug: String!) {
+                  studyPlanV2Detail(planSlug: $planSlug) {
+                    name
+                    slug
+                    questionNum
+                    planSubGroups {
+                      questions {
+                        titleSlug
+                        translatedTitle
+                        title
+                      }
+                    }
+                  }
+                }
+                """,
+                Map.of("planSlug", planSlug)
+        );
+        return parseStudyPlan(data.path("data"));
+    }
+
+    public static List<UserProgressQuestion> parseUserProgress(JsonNode data) {
+        JsonNode questions = data.path("userProgressQuestionList").path("questions");
+        List<UserProgressQuestion> result = new ArrayList<>();
+        questions.forEach(q -> result.add(new UserProgressQuestion(
+                q.path("frontendId").asText(null),
+                q.path("title").asText(null),
+                q.path("translatedTitle").asText(null),
+                q.path("titleSlug").asText(null),
+                q.path("questionStatus").asText(null),
+                q.path("lastResult").asText(null),
+                parseInstant(q.path("lastSubmittedAt").asText(null))
+        )));
+        return result;
+    }
+
+    public static SubmissionPage parseSubmissionPage(JsonNode data) {
+        JsonNode list = data.path("submissionList");
+        List<SubmissionItem> items = new ArrayList<>();
+        list.path("submissions").forEach(s -> items.add(new SubmissionItem(
+                s.path("id").asText(null),
+                s.path("title").asText(null),
+                s.path("status").asText(null),
+                s.path("lang").asText(null),
+                s.path("frontendId").asText(null),
+                s.path("url").asText(null),
+                parseInstant(s.path("timestamp").asText(null))
+        )));
+        return new SubmissionPage(
+                list.path("lastKey").asText(null),
+                list.path("hasNext").asBoolean(false),
+                items
+        );
+    }
+
+    public static StudyPlanSummary parseStudyPlan(JsonNode data) {
+        JsonNode plan = data.path("studyPlanV2Detail");
+        List<StudyPlanQuestion> questions = new ArrayList<>();
+        plan.path("planSubGroups").forEach(group ->
+                group.path("questions").forEach(q -> questions.add(new StudyPlanQuestion(
+                        q.path("titleSlug").asText(null),
+                        q.path("translatedTitle").asText(null),
+                        q.path("title").asText(null)
+                )))
+        );
+        return new StudyPlanSummary(plan.path("name").asText(null), questions);
+    }
+
+    private JsonNode postGraphQL(String operationName, String query, Map<String, Object> variables) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("operationName", operationName);
+        body.put("query", query);
+        body.put("variables", variables);
+
+        JsonNode response = restClient.post()
+                .uri("")
+                .headers(this::applyHeaders)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(JsonNode.class);
+        if (response != null && response.has("errors")) {
+            log.warn("LeetCode GraphQL errors for {}: {}", operationName, response.path("errors"));
+        }
+        return response;
+    }
+
+    private void applyHeaders(HttpHeaders headers) {
+        headers.set(HttpHeaders.USER_AGENT, BROWSER_USER_AGENT);
+        headers.set(HttpHeaders.ORIGIN, ORIGIN);
+        headers.set(HttpHeaders.REFERER, ORIGIN + "/");
+        if (credentials.getCsrfToken() != null) {
+            headers.set("x-csrftoken", credentials.getCsrfToken());
+        }
+        String cookie = buildCookie();
+        if (!cookie.isBlank()) {
+            headers.set(HttpHeaders.COOKIE, cookie);
+        }
+    }
+
+    private String buildCookie() {
+        List<String> parts = new ArrayList<>();
+        if (credentials.getSession() != null) {
+            parts.add("LEETCODE_SESSION=" + credentials.getSession());
+        }
+        if (credentials.getCsrfToken() != null) {
+            parts.add("csrftoken=" + credentials.getCsrfToken());
+        }
+        if (credentials.getCfClearance() != null) {
+            parts.add("cf_clearance=" + credentials.getCfClearance());
+        }
+        return String.join("; ", parts);
+    }
+
+    private static Instant parseInstant(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+}
