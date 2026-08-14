@@ -79,6 +79,4 @@ npm.cmd run dev
 
 - `backend/`：Spring Boot 服务
 - `frontend/`：React 界面
-- `docs/spec.md`：当前规格
-- `docs/spec-v1.md`：早期规格存档
 - `tasks/plan.md`、`tasks/todo.md`：实施计划与任务清单

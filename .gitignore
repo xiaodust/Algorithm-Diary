@@ -28,6 +28,9 @@ backend/jpackage-temp/
 backend/src/main/resources/static/
 dist/
 
+# Local development specs
+docs/
+
 # Node
 frontend/node_modules/
 frontend/dist/
