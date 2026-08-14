@@ -30,6 +30,7 @@ dist/
 
 # Local development specs
 docs/
+tasks/
 
 # Node
 frontend/node_modules/

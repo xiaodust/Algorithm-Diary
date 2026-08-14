@@ -79,4 +79,3 @@ npm.cmd run dev
 
 - `backend/`：Spring Boot 服务
 - `frontend/`：React 界面
-- `tasks/plan.md`、`tasks/todo.md`：实施计划与任务清单
