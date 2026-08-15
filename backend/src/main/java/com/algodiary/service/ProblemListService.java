@@ -52,7 +52,9 @@ public class ProblemListService {
     public void setActiveList(String listId) {
         ProblemList list = store.findList(listId)
                 .orElseThrow(() -> new IllegalArgumentException("题单不存在: " + listId));
-        store.saveGoal(new UserGoal(listId, "COMPLETE", list.problemSlugs().size()));
+        UserGoal current = store.findGoal()
+                .orElse(new UserGoal(listId, "COMPLETE", list.problemSlugs().size(), 3));
+        store.saveGoal(new UserGoal(listId, current.targetType(), current.target(), current.dailyTarget()));
     }
 
     public ListProgress getProgress(ProblemList list) {
@@ -82,7 +84,7 @@ public class ProblemListService {
             throw new IllegalStateException("没有可用的题单");
         }
         ProblemList first = lists.getFirst();
-        store.saveGoal(new UserGoal(first.id(), "COMPLETE", first.problemSlugs().size()));
+        store.saveGoal(new UserGoal(first.id(), "COMPLETE", first.problemSlugs().size(), 3));
         return first;
     }
 }

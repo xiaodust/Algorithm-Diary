@@ -17,7 +17,8 @@ public class PlannerService {
             List<ProblemState> states,
             List<String> mistakeSlugs,
             Set<String> weakTopicIds,
-            Instant now
+            Instant now,
+            int dailyTarget
     ) {
         Map<String, Problem> problemBySlug = indexProblems(problems);
         Map<String, ProblemState> stateBySlug = indexStates(states);
@@ -56,7 +57,7 @@ public class PlannerService {
 
         appendOutsideFallback(ordered, used, activeList.problemSlugs(), stateBySlug, mistakeSet, now);
 
-        int coreSize = Math.min(2, ordered.size());
+        int coreSize = Math.min(Math.max(1, dailyTarget), ordered.size());
         List<PlanTask> core = List.copyOf(ordered.subList(0, coreSize));
         int bonusSize = Math.min(2, ordered.size() - coreSize);
         List<PlanTask> bonus = List.copyOf(ordered.subList(coreSize, coreSize + bonusSize));

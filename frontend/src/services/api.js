@@ -14,6 +14,12 @@ export const api = {
   getLists: () => request('/api/lists'),
   refreshLists: () => request('/api/lists/refresh', { method: 'POST' }),
   getActiveList: () => request('/api/lists/active'),
+  getGoal: () => request('/api/goal'),
+  saveGoal: (payload) =>
+    request('/api/goal', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
   setActiveList: (listId) =>
     request('/api/lists/active', {
       method: 'POST',
@@ -26,6 +32,8 @@ export const api = {
   getTopics: () => request('/api/topics'),
   getTopicStats: () => request('/api/topics/stats'),
   getTopicProblems: (topicId) => request(`/api/topics/${topicId}/problems`),
+  getTopicTrend: (topicId, days = 30) =>
+    request(`/api/topics/${topicId}/trend?days=${days}`),
   getRecommendations: () => request('/api/recommendations'),
   getMistakes: () => request('/api/mistakes'),
   getInsight: () => request('/api/insights/summary'),

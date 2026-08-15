@@ -46,6 +46,13 @@ public class InMemoryAlgoStore implements AlgoStore {
     }
 
     @Override
+    public List<Submission> findAllSubmissions() {
+        return submissions.values().stream()
+                .flatMap(List::stream)
+                .toList();
+    }
+
+    @Override
     public void saveState(ProblemState state) {
         states.put(state.problemSlug(), state);
     }
@@ -123,6 +130,13 @@ public class InMemoryAlgoStore implements AlgoStore {
     @Override
     public List<Review> findReviews(String problemSlug) {
         return new ArrayList<>(reviews.getOrDefault(problemSlug, List.of()));
+    }
+
+    @Override
+    public List<Review> findAllReviews() {
+        return reviews.values().stream()
+                .flatMap(List::stream)
+                .toList();
     }
 
     @Override

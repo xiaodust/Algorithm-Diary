@@ -3,6 +3,7 @@ package com.algodiary.store;
 import com.algodiary.model.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -24,6 +25,17 @@ public class JdbcAlgoStore implements AlgoStore {
     public JdbcAlgoStore(JdbcTemplate jdbc, ObjectMapper objectMapper) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
+    }
+
+    @PostConstruct
+    public void ensureSchemaCompatibility() {
+        List<String> columns = jdbc.query(
+                "PRAGMA table_info(user_goals)",
+                (rs, rowNum) -> rs.getString("name")
+        );
+        if (!columns.contains("daily_target")) {
+            jdbc.execute("ALTER TABLE user_goals ADD COLUMN daily_target INTEGER NOT NULL DEFAULT 3");
+        }
     }
 
     @Override
@@ -316,24 +328,52 @@ public class JdbcAlgoStore implements AlgoStore {
     @Override
     public void saveGoal(UserGoal goal) {
         jdbc.update(
-                "INSERT OR REPLACE INTO user_goals(id, active_list_id, target_type, target) VALUES (1, ?, ?, ?)",
+                "INSERT OR REPLACE INTO user_goals(id, active_list_id, target_type, target, daily_target) VALUES (1, ?, ?, ?, ?)",
                 goal.activeListId(),
                 goal.targetType(),
-                goal.target()
+                goal.target(),
+                goal.dailyTarget()
         );
     }
 
     @Override
     public Optional<UserGoal> findGoal() {
         List<UserGoal> goals = jdbc.query(
-                "SELECT active_list_id, target_type, target FROM user_goals WHERE id = 1",
+                "SELECT active_list_id, target_type, target, daily_target FROM user_goals WHERE id = 1",
                 (rs, rowNum) -> new UserGoal(
                         rs.getString("active_list_id"),
                         rs.getString("target_type"),
-                        rs.getInt("target")
+                        rs.getInt("target"),
+                        rs.getInt("daily_target")
                 )
         );
         return goals.stream().findFirst();
+    }
+
+    @Override
+    public List<Submission> findAllSubmissions() {
+        return jdbc.query(
+                "SELECT problem_slug, status, lang, submitted_at FROM submissions ORDER BY submitted_at",
+                (rs, rowNum) -> new Submission(
+                        rs.getString("problem_slug"),
+                        rs.getString("status"),
+                        rs.getString("lang"),
+                        parseInstant(rs.getString("submitted_at"))
+                )
+        );
+    }
+
+    @Override
+    public List<Review> findAllReviews() {
+        return jdbc.query(
+                "SELECT problem_slug, reviewed_at, passed, notes FROM reviews ORDER BY reviewed_at",
+                (rs, rowNum) -> new Review(
+                        rs.getString("problem_slug"),
+                        parseInstant(rs.getString("reviewed_at")),
+                        rs.getInt("passed") == 1,
+                        rs.getString("notes")
+                )
+        );
     }
 
     @Override

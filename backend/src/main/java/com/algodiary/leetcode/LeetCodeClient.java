@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,10 +27,13 @@ public class LeetCodeClient {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
     private static final String ORIGIN = "https://leetcode.cn";
+    private static final int MAX_ATTEMPTS = 3;
+    private static final long MIN_REQUEST_INTERVAL_MS = 500L;
 
     private final RestClient restClient;
     private final LeetCodeProperties properties;
     private final LeetCodeCredentials credentials;
+    private volatile long lastRequestAt;
 
     public LeetCodeClient(RestClient.Builder builder, LeetCodeProperties properties, LeetCodeCredentials credentials) {
         this.restClient = builder.baseUrl(properties.graphqlUrl()).build();
@@ -231,17 +236,78 @@ public class LeetCodeClient {
         body.put("query", query);
         body.put("variables", variables);
 
-        JsonNode response = restClient.post()
-                .uri("")
-                .headers(this::applyHeaders)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .body(JsonNode.class);
-        if (response != null && response.has("errors")) {
-            log.warn("LeetCode GraphQL errors for {}: {}", operationName, response.path("errors"));
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            throttle();
+            try {
+                JsonNode response = restClient.post()
+                        .uri("")
+                        .headers(this::applyHeaders)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(body)
+                        .retrieve()
+                        .body(JsonNode.class);
+                if (isRateLimitError(response) && attempt < MAX_ATTEMPTS) {
+                    sleepBackoff(attempt);
+                    continue;
+                }
+                if (response != null && response.has("errors")) {
+                    log.warn("LeetCode GraphQL errors for {}: {}", operationName, response.path("errors"));
+                }
+                return response;
+            } catch (RestClientResponseException ex) {
+                if (isRetryableStatus(ex.getStatusCode().value()) && attempt < MAX_ATTEMPTS) {
+                    log.warn("LeetCode {} failed with status {}, retrying {}/{}",
+                            operationName, ex.getStatusCode().value(), attempt + 1, MAX_ATTEMPTS);
+                    sleepBackoff(attempt);
+                    continue;
+                }
+                throw ex;
+            } catch (ResourceAccessException ex) {
+                if (attempt < MAX_ATTEMPTS) {
+                    log.warn("LeetCode {} network error, retrying {}/{}: {}",
+                            operationName, attempt + 1, MAX_ATTEMPTS, ex.getMessage());
+                    sleepBackoff(attempt);
+                    continue;
+                }
+                throw ex;
+            }
         }
-        return response;
+        throw new IllegalStateException("LeetCode request failed after retries: " + operationName);
+    }
+
+    private boolean isRetryableStatus(int status) {
+        return status == 429 || status >= 500;
+    }
+
+    private boolean isRateLimitError(JsonNode response) {
+        if (response == null || !response.has("errors")) {
+            return false;
+        }
+        String errors = response.path("errors").toString();
+        String lower = errors.toLowerCase();
+        return lower.contains("rate") || lower.contains("too many") || lower.contains("throttle");
+    }
+
+    private void throttle() {
+        long now = System.currentTimeMillis();
+        long previous = lastRequestAt;
+        if (previous != 0 && now - previous < MIN_REQUEST_INTERVAL_MS) {
+            try {
+                Thread.sleep(MIN_REQUEST_INTERVAL_MS - (now - previous));
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        lastRequestAt = System.currentTimeMillis();
+    }
+
+    private void sleepBackoff(int attempt) {
+        long delay = 600L * (1L << (attempt - 1));
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void applyHeaders(HttpHeaders headers) {

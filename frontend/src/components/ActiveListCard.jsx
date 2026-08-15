@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 
-export default function ActiveListCard({ lists, active, switching, loading, onSetActive, onRefreshLists }) {
+export default function ActiveListCard({
+  lists,
+  active,
+  goal,
+  switching,
+  loading,
+  onSetActive,
+  onRefreshLists,
+  onOpenGoal
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const disabled = switching || loading;
@@ -107,6 +116,13 @@ export default function ActiveListCard({ lists, active, switching, loading, onSe
         >
           刷新题单
         </button>
+        <button
+          type="button"
+          onClick={onOpenGoal}
+          className="cursor-pointer rounded-lg border border-indigo-200 px-3 py-2 text-sm text-indigo-600 transition hover:bg-indigo-50 active:scale-95"
+        >
+          设置目标
+        </button>
         {switching && <span className="text-xs text-slate-400">切换中…</span>}
       </div>
 
@@ -125,6 +141,11 @@ export default function ActiveListCard({ lists, active, switching, loading, onSe
           <div className="mt-2 text-xs text-slate-500">
             还差 {active.remaining ?? active.total - active.solved} 题
             {active.estimatedDays != null ? ` · 按当前节奏预计 ${active.estimatedDays} 天完成` : ' · 预计时间待积累数据'}
+            {goal && (
+              <span className="ml-2 text-indigo-600">
+                · 每日目标 {goal.dailyTarget} 题
+              </span>
+            )}
           </div>
         </div>
       )}

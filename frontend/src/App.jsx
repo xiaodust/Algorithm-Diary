@@ -12,10 +12,12 @@ import LlmSettingsModal from './components/modals/LlmSettingsModal.jsx';
 import MistakeNoteModal from './components/modals/MistakeNoteModal.jsx';
 import ExplainModal from './components/modals/ExplainModal.jsx';
 import TopicsModal from './components/modals/TopicsModal.jsx';
+import GoalModal from './components/modals/GoalModal.jsx';
 
 export default function App() {
   const [lists, setLists] = useState([]);
   const [active, setActive] = useState(null);
+  const [goal, setGoal] = useState(null);
   const [plan, setPlan] = useState(null);
   const [checkin, setCheckin] = useState(null);
   const [stats, setStats] = useState([]);
@@ -53,7 +55,10 @@ export default function App() {
   const [showTopics, setShowTopics] = useState(false);
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [topicProblems, setTopicProblems] = useState([]);
+  const [topicTrend, setTopicTrend] = useState([]);
   const [loadingTopic, setLoadingTopic] = useState(false);
+  const [showGoal, setShowGoal] = useState(false);
+  const [savingGoal, setSavingGoal] = useState(false);
 
   const busy = loading || syncing || switching || savingSettings;
   const weakTopics = stats.filter((stat) => stat.weak);
@@ -63,10 +68,11 @@ export default function App() {
     setLoading(true);
     setError('');
     try {
-      const [listData, activeData, planData, checkinData, statsData, recData, mistakeData, topicData, titleData, insightData] =
+      const [listData, activeData, goalData, planData, checkinData, statsData, recData, mistakeData, topicData, titleData, insightData] =
         await Promise.all([
           api.getLists(),
           api.getActiveList(),
+          api.getGoal(),
           api.getPlan(),
           api.getPlanStatus(),
           api.getTopicStats(),
@@ -78,6 +84,7 @@ export default function App() {
         ]);
       setLists(listData);
       setActive(activeData);
+      setGoal(goalData);
       setPlan(planData);
       setCheckin(checkinData);
       setStats(statsData);
@@ -285,6 +292,22 @@ export default function App() {
     }
   };
 
+  const handleSaveGoal = async (payload) => {
+    setError('');
+    setSavingGoal(true);
+    try {
+      const saved = await api.saveGoal(payload);
+      setGoal(saved);
+      setShowGoal(false);
+      setNotice('刷题目标已保存');
+      await loadAll();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSavingGoal(false);
+    }
+  };
+
   const openTopics = () => {
     setShowTopics(true);
     if (stats.length > 0) {
@@ -297,7 +320,12 @@ export default function App() {
     setSelectedTopicId(topicId);
     setLoadingTopic(true);
     try {
-      setTopicProblems(await api.getTopicProblems(topicId));
+      const [problems, trend] = await Promise.all([
+        api.getTopicProblems(topicId),
+        api.getTopicTrend(topicId)
+      ]);
+      setTopicProblems(problems);
+      setTopicTrend(trend ?? []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -333,10 +361,12 @@ export default function App() {
       <ActiveListCard
         lists={lists}
         active={active}
+        goal={goal}
         switching={switching}
         loading={loading}
         onSetActive={handleSetActive}
         onRefreshLists={handleRefreshLists}
+        onOpenGoal={() => setShowGoal(true)}
       />
 
       <InsightCard insight={insight} onRefreshInsight={handleRefreshInsight} />
@@ -426,9 +456,19 @@ export default function App() {
           topics={topics}
           selectedTopicId={selectedTopicId}
           problems={loadingTopic ? [] : topicProblems}
+          trend={loadingTopic ? [] : topicTrend}
           problemTitles={problemTitles}
           onSelectTopic={selectTopic}
           onClose={() => setShowTopics(false)}
+        />
+      )}
+
+      {showGoal && (
+        <GoalModal
+          goal={goal}
+          saving={savingGoal}
+          onSave={handleSaveGoal}
+          onClose={() => setShowGoal(false)}
         />
       )}
     </div>

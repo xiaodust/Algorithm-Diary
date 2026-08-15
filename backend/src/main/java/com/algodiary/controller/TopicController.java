@@ -6,11 +6,14 @@ import com.algodiary.model.Topic;
 import com.algodiary.dto.TopicProblem;
 import com.algodiary.service.AnalyzerService;
 import com.algodiary.service.TopicService;
+import com.algodiary.service.TopicTrendService;
 import com.algodiary.dto.TopicStats;
+import com.algodiary.dto.TopicTrendPoint;
 import com.algodiary.store.AlgoStore;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -23,11 +26,18 @@ public class TopicController {
 
     private final TopicService topicService;
     private final AnalyzerService analyzer;
+    private final TopicTrendService trendService;
     private final AlgoStore store;
 
-    public TopicController(TopicService topicService, AnalyzerService analyzer, AlgoStore store) {
+    public TopicController(
+            TopicService topicService,
+            AnalyzerService analyzer,
+            TopicTrendService trendService,
+            AlgoStore store
+    ) {
         this.topicService = topicService;
         this.analyzer = analyzer;
+        this.trendService = trendService;
         this.store = store;
     }
 
@@ -57,5 +67,13 @@ public class TopicController {
                                 .orElse(false)
                 ))
                 .toList();
+    }
+
+    @GetMapping("/{topicId}/trend")
+    public List<TopicTrendPoint> trend(
+            @PathVariable String topicId,
+            @RequestParam(name = "days", defaultValue = "30") int days
+    ) {
+        return trendService.trend(topicId, days);
     }
 }

@@ -80,7 +80,8 @@ CREATE TABLE IF NOT EXISTS user_goals (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     active_list_id TEXT,
     target_type TEXT,
-    target INTEGER
+    target INTEGER,
+    daily_target INTEGER NOT NULL DEFAULT 3
 );
 
 CREATE TABLE IF NOT EXISTS recommendations (

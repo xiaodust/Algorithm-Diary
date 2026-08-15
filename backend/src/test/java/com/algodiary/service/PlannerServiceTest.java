@@ -31,7 +31,7 @@ class PlannerServiceTest {
         );
         Set<String> weakTopics = Set.of("dp");
 
-        DailyPlan plan = service.plan(list, problems, states, List.of("a"), weakTopics, now);
+        DailyPlan plan = service.plan(list, problems, states, List.of("a"), weakTopics, now, 2);
 
         assertThat(plan.coreTasks())
                 .extracting(PlanTask::reason)
@@ -45,7 +45,7 @@ class PlannerServiceTest {
     void returnsEmptyTasksWhenNothingToPlan() {
         ProblemList list = new ProblemList("hot-100", "Hot 100", "BUILTIN", List.of());
 
-        DailyPlan plan = service.plan(list, List.of(), List.of(), List.of(), Set.of(), now);
+        DailyPlan plan = service.plan(list, List.of(), List.of(), List.of(), Set.of(), now, 3);
 
         assertThat(plan.coreTasks()).isEmpty();
         assertThat(plan.bonusTasks()).isEmpty();

@@ -14,6 +14,7 @@ public interface AlgoStore {
 
     void saveSubmission(Submission submission);
     List<Submission> findSubmissions(String problemSlug);
+    List<Submission> findAllSubmissions();
 
     void saveState(ProblemState state);
     Optional<ProblemState> findState(String problemSlug);
@@ -35,6 +36,7 @@ public interface AlgoStore {
 
     void saveReview(Review review);
     List<Review> findReviews(String problemSlug);
+    List<Review> findAllReviews();
 
     void savePlan(DailyPlan plan);
     Optional<DailyPlan> findPlan(LocalDate date);
