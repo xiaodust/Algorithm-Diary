@@ -1,6 +1,7 @@
 package com.algodiary.store;
 
 import com.algodiary.model.*;
+import com.algodiary.dto.Recommendation;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -397,6 +398,47 @@ public class JdbcAlgoStore implements AlgoStore {
     }
 
     @Override
+    public void saveRecommendation(Recommendation recommendation) {
+        jdbc.update(
+                "INSERT INTO recommendations(problem_slug, reason, created_at) VALUES (?, ?, ?)",
+                recommendation.problemSlug(),
+                recommendation.reason(),
+                Instant.now().toString()
+        );
+    }
+
+    @Override
+    public List<Recommendation> findRecommendationsSince(Instant since) {
+        return jdbc.query(
+                "SELECT problem_slug, reason, created_at FROM recommendations WHERE created_at >= ? ORDER BY created_at DESC",
+                (rs, rowNum) -> new Recommendation(
+                        rs.getString("problem_slug"),
+                        rs.getString("reason"),
+                        "https://leetcode.cn/problems/" + rs.getString("problem_slug") + "/"
+                ),
+                since.toString()
+        );
+    }
+
+    @Override
+    public void saveAgentMemory(String content) {
+        jdbc.update(
+                "INSERT INTO app_settings(key, value) VALUES ('agent.memory', ?) "
+                        + "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                content
+        );
+    }
+
+    @Override
+    public Optional<String> findAgentMemory() {
+        List<String> values = jdbc.query(
+                "SELECT value FROM app_settings WHERE key = 'agent.memory'",
+                (rs, rowNum) -> rs.getString("value")
+        );
+        return values.stream().findFirst();
+    }
+
+    @Override
     public void clearPracticeData() {
         jdbc.update("DELETE FROM submissions");
         jdbc.update("DELETE FROM problem_states");
@@ -409,6 +451,7 @@ public class JdbcAlgoStore implements AlgoStore {
         jdbc.update("DELETE FROM stuck_events");
         jdbc.update("DELETE FROM notes");
         jdbc.update("DELETE FROM insights");
+        jdbc.update("DELETE FROM app_settings WHERE key = 'agent.memory'");
     }
 
     private RowMapper<Problem> problemRowMapper() {

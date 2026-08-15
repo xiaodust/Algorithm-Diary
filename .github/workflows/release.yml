@@ -1,0 +1,75 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Copy frontend into backend resources
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path backend\src\main\resources\static -Force | Out-Null
+          Copy-Item -Path frontend\dist\* -Destination backend\src\main\resources\static -Recurse -Force
+
+      - name: Run backend tests
+        working-directory: backend
+        run: mvn.cmd -B test
+
+      - name: Package desktop jar
+        working-directory: backend
+        run: mvn.cmd -B -Pdesktop -DskipTests package
+
+      - name: Install WiX Toolset
+        shell: pwsh
+        run: choco install wixtoolset --no-progress -y
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          $version = "$env:GITHUB_REF_NAME".TrimStart('v')
+          New-Item -ItemType Directory -Path backend\jpackage-input -Force | Out-Null
+          New-Item -ItemType Directory -Path backend\installer-out -Force | Out-Null
+          Copy-Item -LiteralPath backend\target\algorithm-diary-0.1.0-SNAPSHOT.jar -Destination backend\jpackage-input\algorithm-diary-0.1.0-SNAPSHOT.jar -Force
+          $env:PATH = "C:\ProgramData\chocolatey\bin;$env:PATH"
+          jpackage --type exe --input backend\jpackage-input --main-jar algorithm-diary-0.1.0-SNAPSHOT.jar --main-class org.springframework.boot.loader.launch.JarLauncher --name AlgorithmDiary --app-version $version --icon assets\app-icon.ico --dest backend\installer-out --temp backend\jpackage-temp-ci --win-menu --win-shortcut --verbose
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: backend/installer-out/AlgorithmDiary-*.exe
+          generate_release_notes: true

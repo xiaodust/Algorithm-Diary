@@ -2,7 +2,9 @@ package com.algodiary.support;
 
 import com.algodiary.model.*;
 import com.algodiary.store.AlgoStore;
+import com.algodiary.dto.Recommendation;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -18,6 +20,8 @@ public class InMemoryAlgoStore implements AlgoStore {
     private final Map<String, List<Review>> reviews = new LinkedHashMap<>();
     private final Map<LocalDate, DailyPlan> plans = new HashMap<>();
     private final Map<String, String> insights = new LinkedHashMap<>();
+    private final List<Recommendation> recommendations = new ArrayList<>();
+    private String agentMemory;
     private UserGoal goal;
 
     @Override
@@ -179,6 +183,26 @@ public class InMemoryAlgoStore implements AlgoStore {
     }
 
     @Override
+    public void saveRecommendation(Recommendation recommendation) {
+        recommendations.add(recommendation);
+    }
+
+    @Override
+    public List<Recommendation> findRecommendationsSince(Instant since) {
+        return new ArrayList<>(recommendations);
+    }
+
+    @Override
+    public void saveAgentMemory(String content) {
+        this.agentMemory = content;
+    }
+
+    @Override
+    public Optional<String> findAgentMemory() {
+        return Optional.ofNullable(agentMemory);
+    }
+
+    @Override
     public void clearPracticeData() {
         problems.clear();
         submissions.clear();
@@ -188,5 +212,7 @@ public class InMemoryAlgoStore implements AlgoStore {
         plans.clear();
         problemTopics.clear();
         insights.clear();
+        recommendations.clear();
+        agentMemory = null;
     }
 }

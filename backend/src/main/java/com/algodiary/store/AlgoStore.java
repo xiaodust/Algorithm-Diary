@@ -1,7 +1,9 @@
 package com.algodiary.store;
 
+import com.algodiary.dto.Recommendation;
 import com.algodiary.model.*;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -49,6 +51,12 @@ public interface AlgoStore {
 
     void saveInsight(String type, String content);
     Optional<String> findLatestInsight(String type);
+
+    void saveRecommendation(Recommendation recommendation);
+    List<Recommendation> findRecommendationsSince(Instant since);
+
+    void saveAgentMemory(String content);
+    Optional<String> findAgentMemory();
 
     void clearPracticeData();
 }
