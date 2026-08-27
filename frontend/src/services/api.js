@@ -4,7 +4,14 @@ async function request(path, options = {}) {
     ...options
   });
   if (!response.ok) {
-    throw new Error(`请求失败: ${response.status}`);
+    let detail = '';
+    try {
+      const body = await response.json();
+      detail = body?.message || body?.error || '';
+    } catch {
+      // 忽略非 JSON 错误响应
+    }
+    throw new Error(`请求失败: ${response.status}${detail ? ` · ${detail}` : ''}`);
   }
   const text = await response.text();
   return text ? JSON.parse(text) : null;

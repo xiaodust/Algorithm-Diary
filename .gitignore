@@ -32,6 +32,9 @@ dist/
 docs/
 tasks/
 
+# WorkBuddy workspace data
+.workbuddy/
+
 # Node
 frontend/node_modules/
 frontend/dist/
