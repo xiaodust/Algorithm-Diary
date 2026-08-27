@@ -19,3 +19,28 @@ logs/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Java / Maven
+backend/target/
+backend/installer-out/
+backend/jpackage-input/
+backend/jpackage-temp*/
+backend/src/main/resources/static/
+dist/
+
+# Local development specs
+docs/
+tasks/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.npm-cache/
+
+# Runtime data
+backend/data/
+*.db
+backend/run.log
+backend/run.err
+frontend/dev.log
+frontend/dev.err
