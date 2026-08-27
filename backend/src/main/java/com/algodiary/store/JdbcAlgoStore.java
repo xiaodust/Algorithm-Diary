@@ -184,6 +184,12 @@ public class JdbcAlgoStore implements AlgoStore {
     }
 
     @Override
+    public void deleteList(String listId) {
+        jdbc.update("DELETE FROM problem_list_items WHERE list_id = ?", listId);
+        jdbc.update("DELETE FROM problem_lists WHERE id = ?", listId);
+    }
+
+    @Override
     public void saveTopic(Topic topic) {
         jdbc.update(
                 "INSERT OR REPLACE INTO topics(id, name, category) VALUES (?, ?, ?)",

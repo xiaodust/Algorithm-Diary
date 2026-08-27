@@ -1,5 +1,8 @@
 package com.algodiary.controller;
 
+import com.algodiary.leetcode.LeetCodeClient;
+import com.algodiary.leetcode.SearchedProblem;
+import com.algodiary.leetcode.StudyPlanInfo;
 import com.algodiary.model.ProblemList;
 import com.algodiary.dto.ListProgress;
 import com.algodiary.service.ListRefreshService;
@@ -14,10 +17,12 @@ public class ListController {
 
     private final ProblemListService service;
     private final ListRefreshService refreshService;
+    private final LeetCodeClient leetCodeClient;
 
-    public ListController(ProblemListService service, ListRefreshService refreshService) {
+    public ListController(ProblemListService service, ListRefreshService refreshService, LeetCodeClient leetCodeClient) {
         this.service = service;
         this.refreshService = refreshService;
+        this.leetCodeClient = leetCodeClient;
     }
 
     @GetMapping
@@ -42,6 +47,43 @@ public class ListController {
         return service.getProgress(service.getActiveList());
     }
 
+    @PostMapping
+    public ProblemList create(@RequestBody SaveListRequest request) {
+        return service.createCustomList(request.name(), request.slugs());
+    }
+
+    @PutMapping("/{listId}")
+    public ProblemList update(@PathVariable String listId, @RequestBody SaveListRequest request) {
+        return service.updateCustomList(listId, request.name(), request.slugs());
+    }
+
+    @DeleteMapping("/{listId}")
+    public void delete(@PathVariable String listId) {
+        service.deleteCustomList(listId);
+    }
+
+    @GetMapping("/search")
+    public List<SearchedProblem> search(@RequestParam String keyword,
+                                        @RequestParam(defaultValue = "20") int limit) {
+        return leetCodeClient.searchProblems(keyword, limit);
+    }
+
+    @GetMapping("/study-plans")
+    public List<StudyPlanInfo> studyPlans() {
+        return leetCodeClient.fetchStudyPlans();
+    }
+
+    @PostMapping("/import")
+    public ProblemList importPlan(@RequestBody ImportPlanRequest request) {
+        return service.importStudyPlan(request.planSlug());
+    }
+
     public record SetActiveRequest(String listId) {
+    }
+
+    public record SaveListRequest(String name, List<String> slugs) {
+    }
+
+    public record ImportPlanRequest(String planSlug) {
     }
 }

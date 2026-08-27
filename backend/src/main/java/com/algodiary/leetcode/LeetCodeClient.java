@@ -183,6 +183,68 @@ public class LeetCodeClient {
         return parseStudyPlan(data.path("data"));
     }
 
+    public List<StudyPlanInfo> fetchStudyPlans() {
+        // leetcode.cn 未提供公开的官方题单列表 GraphQL 字段，这里内置常用的官方题单 slug
+        // 详情可通过 fetchStudyPlan(planSlug) 拉取
+        return List.of(
+                new StudyPlanInfo("top-100-liked", "LeetCode 热题 100", null),
+                new StudyPlanInfo("top-interview-150", "面试经典 150 题", null),
+                new StudyPlanInfo("coding-interviews", "剑指 Offer", null),
+                new StudyPlanInfo("leetcode-75", "LeetCode 75", null),
+                new StudyPlanInfo("dynamic-programming", "动态规划（基础版）", null),
+                new StudyPlanInfo("dynamic-programming-ii", "动态规划（进阶版）", null),
+                new StudyPlanInfo("binary-search", "二分查找 · 系统掌握", null),
+                new StudyPlanInfo("algorithm-basic", "编程基础 0 到 1", null),
+                new StudyPlanInfo("graph-theory", "图论 · 从入门到精通", null),
+                new StudyPlanInfo("pandas-for-data-engineering", "Pandas 入门", null),
+                new StudyPlanInfo("sql-basic", "高频 SQL 50 题（基础版）", null),
+                new StudyPlanInfo("sql-advanced", "高频 SQL 50 题（进阶版）", null),
+                new StudyPlanInfo("front-end-100", "前端面试 100 题", null),
+                new StudyPlanInfo("cracking-the-coding-interview", "程序员面试金典", null)
+        );
+    }
+
+    public List<SearchedProblem> searchProblems(String keyword, int limit) {
+        JsonNode data = postGraphQL(
+                "problemsetQuestionList",
+                """
+                query problemsetQuestionList($categorySlug: String, $skip: Int, $limit: Int, $filters: QuestionListFilterInput) {
+                  problemsetQuestionList(categorySlug: $categorySlug, skip: $skip, limit: $limit, filters: $filters) {
+                    total
+                    questions {
+                      frontendQuestionId
+                      titleSlug
+                      title
+                      titleCn
+                      difficulty
+                    }
+                  }
+                }
+                """,
+                Map.of(
+                        "categorySlug", "all-code-essentials",
+                        "skip", 0,
+                        "limit", Math.min(Math.max(limit, 1), 50),
+                        "filters", Map.of("searchKeywords", keyword == null ? "" : keyword)
+                )
+        );
+        List<SearchedProblem> results = new ArrayList<>();
+        data.path("data").path("problemsetQuestionList").path("questions").forEach(q ->
+                results.add(new SearchedProblem(
+                        q.path("titleSlug").asText(null),
+                        q.path("title").asText(null),
+                        firstNonBlank(q.path("titleCn").asText(null), q.path("translatedTitle").asText(null)),
+                        q.path("difficulty").asText(null),
+                        q.path("frontendQuestionId").asText(null)
+                ))
+        );
+        return results;
+    }
+
+    private static String firstNonBlank(String first, String second) {
+        return first != null && !first.isBlank() ? first : second;
+    }
+
     public static List<UserProgressQuestion> parseUserProgress(JsonNode data) {
         JsonNode questions = data.path("userProgressQuestionList").path("questions");
         List<UserProgressQuestion> result = new ArrayList<>();

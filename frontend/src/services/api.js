@@ -21,6 +21,25 @@ export const api = {
   getLists: () => request('/api/lists'),
   refreshLists: () => request('/api/lists/refresh', { method: 'POST' }),
   getActiveList: () => request('/api/lists/active'),
+  createList: (payload) =>
+    request('/api/lists', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+  updateList: (listId, payload) =>
+    request(`/api/lists/${listId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    }),
+  deleteList: (listId) => request(`/api/lists/${listId}`, { method: 'DELETE' }),
+  searchProblems: (keyword, limit = 20) =>
+    request(`/api/lists/search?keyword=${encodeURIComponent(keyword)}&limit=${limit}`),
+  getStudyPlans: () => request('/api/lists/study-plans'),
+  importStudyPlan: (planSlug) =>
+    request('/api/lists/import', {
+      method: 'POST',
+      body: JSON.stringify({ planSlug })
+    }),
   getGoal: () => request('/api/goal'),
   saveGoal: (payload) =>
     request('/api/goal', {
@@ -46,6 +65,7 @@ export const api = {
   getInsight: () => request('/api/insights/summary'),
   refreshInsight: () => request('/api/insights/refresh', { method: 'POST' }),
   getProblemTitles: () => request('/api/problems/titles'),
+  getSolvedProblems: () => request('/api/problems/solved'),
   reviewMistake: (slug, passed, notes = '') =>
     request(`/api/mistakes/${slug}/review`, {
       method: 'POST',

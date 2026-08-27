@@ -13,6 +13,7 @@ import MistakeNoteModal from './components/modals/MistakeNoteModal.jsx';
 import ExplainModal from './components/modals/ExplainModal.jsx';
 import TopicsModal from './components/modals/TopicsModal.jsx';
 import GoalModal from './components/modals/GoalModal.jsx';
+import CustomListModal from './components/modals/CustomListModal.jsx';
 
 export default function App() {
   const [lists, setLists] = useState([]);
@@ -59,6 +60,9 @@ export default function App() {
   const [loadingTopic, setLoadingTopic] = useState(false);
   const [showGoal, setShowGoal] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
+  const [showCustomList, setShowCustomList] = useState(false);
+  const [editingList, setEditingList] = useState(null);
+  const [savingList, setSavingList] = useState(false);
 
   const busy = loading || syncing || switching || savingSettings;
   const weakTopics = stats.filter((stat) => stat.weak);
@@ -308,6 +312,51 @@ export default function App() {
     }
   };
 
+  const handleOpenNewList = () => {
+    setEditingList(null);
+    setShowCustomList(true);
+  };
+
+  const handleEditList = (list) => {
+    setEditingList(list);
+    setShowCustomList(true);
+  };
+
+  const handleSaveCustomList = async (payload) => {
+    setError('');
+    setSavingList(true);
+    try {
+      if (editingList?.id) {
+        await api.updateList(editingList.id, payload);
+        setNotice(`题单「${payload.name}」已更新`);
+      } else {
+        await api.createList(payload);
+        setNotice(`题单「${payload.name}」已创建`);
+      }
+      setShowCustomList(false);
+      setEditingList(null);
+      await loadAll();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSavingList(false);
+    }
+  };
+
+  const handleDeleteCustomList = async (list) => {
+    if (!window.confirm(`确定删除题单「${list.name}」吗？此操作不可恢复。`)) {
+      return;
+    }
+    setError('');
+    try {
+      await api.deleteList(list.id);
+      setNotice(`题单「${list.name}」已删除`);
+      await loadAll();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const openTopics = () => {
     setShowTopics(true);
     if (stats.length > 0) {
@@ -367,6 +416,9 @@ export default function App() {
         onSetActive={handleSetActive}
         onRefreshLists={handleRefreshLists}
         onOpenGoal={() => setShowGoal(true)}
+        onNewList={handleOpenNewList}
+        onEditList={handleEditList}
+        onDeleteList={handleDeleteCustomList}
       />
 
       <InsightCard insight={insight} onRefreshInsight={handleRefreshInsight} />
@@ -469,6 +521,18 @@ export default function App() {
           saving={savingGoal}
           onSave={handleSaveGoal}
           onClose={() => setShowGoal(false)}
+        />
+      )}
+
+      {showCustomList && (
+        <CustomListModal
+          list={editingList}
+          saving={savingList}
+          onSave={handleSaveCustomList}
+          onClose={() => {
+            setShowCustomList(false);
+            setEditingList(null);
+          }}
         />
       )}
     </div>

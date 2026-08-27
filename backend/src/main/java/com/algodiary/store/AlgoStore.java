@@ -25,6 +25,7 @@ public interface AlgoStore {
     void saveList(ProblemList problemList);
     Optional<ProblemList> findList(String listId);
     List<ProblemList> findAllLists();
+    void deleteList(String listId);
 
     void saveTopic(Topic topic);
     List<Topic> findAllTopics();

@@ -87,6 +87,11 @@ public class InMemoryAlgoStore implements AlgoStore {
     }
 
     @Override
+    public void deleteList(String listId) {
+        lists.remove(listId);
+    }
+
+    @Override
     public void saveTopic(Topic topic) {
         topics.put(topic.id(), topic);
     }
