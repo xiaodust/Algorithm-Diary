@@ -41,6 +41,8 @@ public class GoalService {
                     store.saveGoal(created);
                     return created;
                 });
+        // 兼容早期版本写入的 "COMPLETE" 脏数据
+        String goalType = "COMPLETE".equals(goal.targetType()) ? TARGET_COMPLETE_LIST : goal.targetType();
         ListProgress progress = listService.getProgress(active);
         int target = goal.target() > 0 ? goal.target() : active.problemSlugs().size();
         int solved = Math.min(progress.solved(), target);
@@ -54,7 +56,7 @@ public class GoalService {
         return new GoalView(
                 active.id(),
                 active.name(),
-                goal.targetType(),
+                goalType,
                 target,
                 goal.dailyTarget(),
                 active.problemSlugs().size(),
@@ -67,6 +69,10 @@ public class GoalService {
 
     public GoalView saveGoal(String targetType, int target, int dailyTarget) {
         String normalizedType = targetType == null ? TARGET_COMPLETE_LIST : targetType.trim().toUpperCase();
+        // 兼容早期版本写入的 "COMPLETE" 脏数据
+        if ("COMPLETE".equals(normalizedType)) {
+            normalizedType = TARGET_COMPLETE_LIST;
+        }
         if (!ALLOWED_TARGET_TYPES.contains(normalizedType)) {
             throw new IllegalArgumentException("不支持的目标类型: " + targetType);
         }

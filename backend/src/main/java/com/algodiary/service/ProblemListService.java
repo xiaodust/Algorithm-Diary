@@ -53,7 +53,7 @@ public class ProblemListService {
         ProblemList list = store.findList(listId)
                 .orElseThrow(() -> new IllegalArgumentException("题单不存在: " + listId));
         UserGoal current = store.findGoal()
-                .orElse(new UserGoal(listId, "COMPLETE", list.problemSlugs().size(), 3));
+                .orElse(new UserGoal(listId, GoalService.TARGET_COMPLETE_LIST, list.problemSlugs().size(), 3));
         store.saveGoal(new UserGoal(listId, current.targetType(), current.target(), current.dailyTarget()));
     }
 
@@ -84,7 +84,7 @@ public class ProblemListService {
             throw new IllegalStateException("没有可用的题单");
         }
         ProblemList first = lists.getFirst();
-        store.saveGoal(new UserGoal(first.id(), "COMPLETE", first.problemSlugs().size(), 3));
+        store.saveGoal(new UserGoal(first.id(), GoalService.TARGET_COMPLETE_LIST, first.problemSlugs().size(), 3));
         return first;
     }
 }
