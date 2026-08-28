@@ -41,5 +41,15 @@ class ExplainServiceTest {
         public String complete(String system, String user) {
             return answer;
         }
+
+        @Override
+        public String chat(String system, List<ChatMessage> history) {
+            return answer;
+        }
+
+        @Override
+        public void chatStream(String system, List<ChatMessage> history, java.util.function.Consumer<String> onDelta) {
+            onDelta.accept(answer);
+        }
     }
 }

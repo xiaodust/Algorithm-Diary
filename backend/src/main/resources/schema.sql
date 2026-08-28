@@ -124,3 +124,18 @@ CREATE TABLE IF NOT EXISTS problem_titles (
     slug TEXT PRIMARY KEY,
     title_cn TEXT
 );
+
+CREATE TABLE IF NOT EXISTS tutor_sessions (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT '新对话',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS tutor_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);

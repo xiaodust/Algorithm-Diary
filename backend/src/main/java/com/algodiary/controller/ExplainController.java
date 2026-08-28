@@ -2,7 +2,7 @@ package com.algodiary.controller;
 
 import com.algodiary.model.Problem;
 import com.algodiary.service.ExplainService;
-import com.algodiary.store.AlgoStore;
+import com.algodiary.service.TutorService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -10,16 +10,16 @@ import org.springframework.web.bind.annotation.*;
 public class ExplainController {
 
     private final ExplainService explainService;
-    private final AlgoStore store;
+    private final TutorService tutorService;
 
-    public ExplainController(ExplainService explainService, AlgoStore store) {
+    public ExplainController(ExplainService explainService, TutorService tutorService) {
         this.explainService = explainService;
-        this.store = store;
+        this.tutorService = tutorService;
     }
 
     @PostMapping
     public ExplainResponse explain(@RequestBody ExplainRequest request) {
-        Problem problem = store.findProblem(request.problemSlug()).orElse(null);
+        Problem problem = tutorService.resolveProblem(request.problemSlug());
         String content = explainService.explain(problem, request.hintLevel());
         return new ExplainResponse(content);
     }

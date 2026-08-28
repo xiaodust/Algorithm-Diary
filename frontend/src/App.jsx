@@ -10,10 +10,10 @@ import MistakeCard from './components/MistakeCard.jsx';
 import LeetCodeSettingsModal from './components/modals/LeetCodeSettingsModal.jsx';
 import LlmSettingsModal from './components/modals/LlmSettingsModal.jsx';
 import MistakeNoteModal from './components/modals/MistakeNoteModal.jsx';
-import ExplainModal from './components/modals/ExplainModal.jsx';
 import TopicsModal from './components/modals/TopicsModal.jsx';
 import GoalModal from './components/modals/GoalModal.jsx';
 import CustomListModal from './components/modals/CustomListModal.jsx';
+import TutorDrawer from './components/modals/TutorDrawer.jsx';
 
 export default function App() {
   const [lists, setLists] = useState([]);
@@ -44,9 +44,7 @@ export default function App() {
   const [llmBaseUrl, setLlmBaseUrl] = useState('https://api.deepseek.com/v1');
   const [llmModel, setLlmModel] = useState('deepseek-v4-flash');
   const [explainSlug, setExplainSlug] = useState(null);
-  const [explainLevel, setExplainLevel] = useState(0);
-  const [explainText, setExplainText] = useState('');
-  const [explaining, setExplaining] = useState(false);
+  const [showTutor, setShowTutor] = useState(false);
   const [mistakeSlug, setMistakeSlug] = useState(null);
   const [mistakeErrorType, setMistakeErrorType] = useState('');
   const [mistakeStuckPoint, setMistakeStuckPoint] = useState('');
@@ -214,24 +212,14 @@ export default function App() {
     }
   };
 
-  const handleExplain = async (level) => {
-    setError('');
-    setExplainLevel(level);
-    setExplaining(true);
-    try {
-      const result = await api.explain(explainSlug, level);
-      setExplainText(result.content ?? result);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setExplaining(false);
-    }
+  const openExplain = (slug) => {
+    // 解析整合进侧边栏 AI 助教
+    setExplainSlug(slug);
+    setShowTutor(true);
   };
 
-  const openExplain = (slug) => {
-    setExplainSlug(slug);
-    setExplainText('');
-    setExplainLevel(0);
+  const handleExplainHandled = () => {
+    setExplainSlug(null);
   };
 
   const handleReviewMistake = async (slug, passed) => {
@@ -490,18 +478,6 @@ export default function App() {
         />
       )}
 
-      {explainSlug && (
-        <ExplainModal
-          slug={explainSlug}
-          title={displayTitle(explainSlug)}
-          level={explainLevel}
-          text={explainText}
-          explaining={explaining}
-          onLevelChange={handleExplain}
-          onClose={() => setExplainSlug(null)}
-        />
-      )}
-
       {showTopics && (
         <TopicsModal
           stats={stats}
@@ -523,6 +499,30 @@ export default function App() {
           onClose={() => setShowGoal(false)}
         />
       )}
+
+      {/* AI 助教侧边栏 */}
+      <TutorDrawer
+        open={showTutor}
+        onClose={() => setShowTutor(false)}
+        llmConfigured={Boolean(llmSettings?.configured)}
+        onNotice={setNotice}
+        explainRequest={
+          explainSlug
+            ? { slug: explainSlug, title: displayTitle(explainSlug), level: 0 }
+            : null
+        }
+        onExplainHandled={handleExplainHandled}
+      />
+
+      {/* 悬浮按钮 */}
+      <button
+        type="button"
+        onClick={() => setShowTutor((v) => !v)}
+        aria-label="打开 AI 算法助教"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-indigo-600 text-2xl text-white shadow-lg transition hover:scale-105 hover:bg-indigo-500 active:scale-95"
+      >
+        🤖
+      </button>
 
       {showCustomList && (
         <CustomListModal

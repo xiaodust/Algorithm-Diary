@@ -11,6 +11,13 @@ public record MemoryProfile(
         double pacePerDay,
         List<String> weakTopics,
         List<String> strongTopics,
-        List<String> recentMistakeSlugs
+        List<String> recentMistakeSlugs,
+        List<String> longTermFacts
 ) {
+    public MemoryProfile withLongTermFacts(List<String> facts) {
+        return new MemoryProfile(
+                generatedAt, activeListId, solvedCount, mistakeCount, dailyTarget, pacePerDay,
+                weakTopics, strongTopics, recentMistakeSlugs, facts
+        );
+    }
 }

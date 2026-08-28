@@ -92,5 +92,81 @@ export const api = {
     request('/api/explain', {
       method: 'POST',
       body: JSON.stringify({ problemSlug, hintLevel })
-    })
+    }),
+
+  // ===== AI 助教 =====
+  tutorSessions: () => request('/api/tutor/sessions'),
+  tutorCreateSession: (name) =>
+    request('/api/tutor/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ name })
+    }),
+  tutorRenameSession: (sessionId, name) =>
+    request(`/api/tutor/sessions/${sessionId}/rename`, {
+      method: 'POST',
+      body: JSON.stringify({ name })
+    }),
+  tutorDeleteSession: (sessionId) =>
+    request(`/api/tutor/sessions/${sessionId}`, { method: 'DELETE' }),
+  tutorHistory: (sessionId, limit = 20) =>
+    request(`/api/tutor/history?sessionId=${sessionId}&limit=${limit}`),
+  tutorClear: (sessionId) =>
+    request('/api/tutor/clear', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId })
+    }),
+  tutorRemember: (fact) =>
+    request('/api/tutor/remember', {
+      method: 'POST',
+      body: JSON.stringify({ fact })
+    }),
+  tutorSummarize: (sessionId) =>
+    request(`/api/tutor/sessions/${sessionId}/summarize`, { method: 'POST' }),
+  tutorProfile: () => request('/api/tutor/profile'),
+  tutorChat: (sessionId, message) =>
+    request('/api/tutor/chat', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, message })
+    }),
+  tutorChatStream: async (sessionId, message, onDelta) => {
+    const response = await fetch('/api/tutor/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, message })
+    });
+    if (!response.ok) {
+      let detail = '';
+      try {
+        const body = await response.json();
+        detail = body?.message || body?.error || '';
+      } catch {
+        // 忽略
+      }
+      throw new Error(`请求失败: ${response.status}${detail ? ` · ${detail}` : ''}`);
+    }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (!payload) continue;
+        try {
+          const parsed = JSON.parse(payload);
+          const delta = parsed?.delta ?? '';
+          if (delta === '[DONE]') return;
+          if (delta) onDelta(delta);
+        } catch {
+          // 忽略解析失败的行
+        }
+      }
+    }
+  }
 };

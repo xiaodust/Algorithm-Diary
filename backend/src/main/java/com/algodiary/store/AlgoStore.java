@@ -59,5 +59,14 @@ public interface AlgoStore {
     void saveAgentMemory(String content);
     Optional<String> findAgentMemory();
 
+    void saveTutorSession(String id, String name);
+    void touchTutorSession(String id, String name);
+    List<TutorSession> findAllTutorSessions();
+    void deleteTutorSession(String id);
+
+    void saveTutorMessage(String sessionId, String role, String content);
+    List<TutorMessage> findTutorMessages(String sessionId, int limit);
+    void clearTutorMessages(String sessionId);
+
     void clearPracticeData();
 }

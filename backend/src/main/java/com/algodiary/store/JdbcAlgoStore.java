@@ -445,6 +445,72 @@ public class JdbcAlgoStore implements AlgoStore {
     }
 
     @Override
+    public void saveTutorSession(String id, String name) {
+        String now = Instant.now().toString();
+        jdbc.update(
+                "INSERT OR REPLACE INTO tutor_sessions(id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                id, name, now, now
+        );
+    }
+
+    @Override
+    public void touchTutorSession(String id, String name) {
+        String now = Instant.now().toString();
+        jdbc.update(
+                "UPDATE tutor_sessions SET name = COALESCE(?, name), updated_at = ? WHERE id = ?",
+                name, now, id
+        );
+    }
+
+    @Override
+    public List<TutorSession> findAllTutorSessions() {
+        return jdbc.query(
+                "SELECT id, name, created_at, updated_at FROM tutor_sessions ORDER BY updated_at DESC",
+                (rs, rowNum) -> new TutorSession(
+                        rs.getString("id"),
+                        rs.getString("name"),
+                        parseInstant(rs.getString("created_at")),
+                        parseInstant(rs.getString("updated_at"))
+                )
+        );
+    }
+
+    @Override
+    public void deleteTutorSession(String id) {
+        jdbc.update("DELETE FROM tutor_messages WHERE session_id = ?", id);
+        jdbc.update("DELETE FROM tutor_sessions WHERE id = ?", id);
+    }
+
+    @Override
+    public void saveTutorMessage(String sessionId, String role, String content) {
+        jdbc.update(
+                "INSERT INTO tutor_messages(session_id, role, content, created_at) VALUES (?, ?, ?, ?)",
+                sessionId, role, content, Instant.now().toString()
+        );
+    }
+
+    @Override
+    public List<TutorMessage> findTutorMessages(String sessionId, int limit) {
+        return jdbc.query(
+                "SELECT id, session_id, role, content, created_at FROM tutor_messages "
+                        + "WHERE session_id = ? ORDER BY id DESC LIMIT ?",
+                (rs, rowNum) -> new TutorMessage(
+                        rs.getLong("id"),
+                        rs.getString("session_id"),
+                        rs.getString("role"),
+                        rs.getString("content"),
+                        parseInstant(rs.getString("created_at"))
+                ),
+                sessionId, limit
+        ).reversed();
+    }
+
+    @Override
+    public void clearTutorMessages(String sessionId) {
+        jdbc.update("DELETE FROM tutor_messages WHERE session_id = ?", sessionId);
+    }
+
+    @Override
     public void clearPracticeData() {
         jdbc.update("DELETE FROM submissions");
         jdbc.update("DELETE FROM problem_states");

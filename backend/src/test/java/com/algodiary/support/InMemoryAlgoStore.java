@@ -207,6 +207,59 @@ public class InMemoryAlgoStore implements AlgoStore {
         return Optional.ofNullable(agentMemory);
     }
 
+    private final Map<String, TutorSession> tutorSessions = new LinkedHashMap<>();
+    private final Map<String, List<TutorMessage>> tutorMessages = new LinkedHashMap<>();
+
+    @Override
+    public void saveTutorSession(String id, String name) {
+        Instant now = Instant.now();
+        TutorSession existing = tutorSessions.get(id);
+        tutorSessions.put(id, new TutorSession(id, name,
+                existing == null ? now : existing.createdAt(), now));
+    }
+
+    @Override
+    public void touchTutorSession(String id, String name) {
+        TutorSession existing = tutorSessions.get(id);
+        if (existing == null) {
+            return;
+        }
+        tutorSessions.put(id, new TutorSession(id,
+                name == null || name.isBlank() ? existing.name() : name,
+                existing.createdAt(), Instant.now()));
+    }
+
+    @Override
+    public List<TutorSession> findAllTutorSessions() {
+        return tutorSessions.values().stream()
+                .sorted(Comparator.comparing(TutorSession::updatedAt).reversed())
+                .toList();
+    }
+
+    @Override
+    public void deleteTutorSession(String id) {
+        tutorSessions.remove(id);
+        tutorMessages.remove(id);
+    }
+
+    @Override
+    public void saveTutorMessage(String sessionId, String role, String content) {
+        List<TutorMessage> list = tutorMessages.computeIfAbsent(sessionId, k -> new ArrayList<>());
+        long id = list.isEmpty() ? 1 : list.getLast().id() + 1;
+        list.add(new TutorMessage(id, sessionId, role, content, Instant.now()));
+    }
+
+    @Override
+    public List<TutorMessage> findTutorMessages(String sessionId, int limit) {
+        List<TutorMessage> list = tutorMessages.getOrDefault(sessionId, List.of());
+        return list.subList(Math.max(0, list.size() - limit), list.size());
+    }
+
+    @Override
+    public void clearTutorMessages(String sessionId) {
+        tutorMessages.remove(sessionId);
+    }
+
     @Override
     public void clearPracticeData() {
         problems.clear();

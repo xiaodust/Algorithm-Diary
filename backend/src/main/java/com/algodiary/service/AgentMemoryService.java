@@ -60,6 +60,44 @@ public class AgentMemoryService {
         return profile;
     }
 
+    public List<String> getLongTermFacts() {
+        List<String> facts = store.findAgentMemory()
+                .flatMap(this::parseProfile)
+                .map(MemoryProfile::longTermFacts)
+                .orElse(null);
+        return facts == null ? List.of() : facts;
+    }
+
+    /** 合并新的长期事实（去重，最多保留 MAX_FACTS 条） */
+    public List<String> mergeLongTermFacts(List<String> newFacts) {
+        MemoryProfile profile = getProfile();
+        List<String> merged = new java.util.ArrayList<>(profile.longTermFacts());
+        for (String fact : newFacts) {
+            String trimmed = fact == null ? "" : fact.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            boolean duplicate = merged.stream().anyMatch(existing ->
+                    existing.contains(trimmed) || trimmed.contains(existing));
+            if (!duplicate) {
+                merged.add(trimmed);
+            }
+        }
+        List<String> capped = merged.size() > MAX_FACTS
+                ? merged.subList(merged.size() - MAX_FACTS, merged.size())
+                : merged;
+        store.saveAgentMemory(toJson(profile.withLongTermFacts(capped)));
+        return capped;
+    }
+
+    public List<String> clearLongTermFacts() {
+        MemoryProfile profile = getProfile();
+        store.saveAgentMemory(toJson(profile.withLongTermFacts(List.of())));
+        return List.of();
+    }
+
+    private static final int MAX_FACTS = 50;
+
     private MemoryProfile buildProfile() {
         List<Problem> problems = store.findAllProblems();
         List<ProblemState> states = store.findAllStates();
@@ -98,8 +136,9 @@ public class AgentMemoryService {
                 progress.pacePerDay(),
                 weakTopics,
                 strongTopics,
-                recentMistakeSlugs
-        );
+                recentMistakeSlugs,
+                List.of()
+        ).withLongTermFacts(getLongTermFacts());
     }
 
     private String toJson(MemoryProfile profile) {
