@@ -3,9 +3,11 @@ export default function Header({
   llmSettings,
   syncing,
   switching,
+  tutorOpen,
   onOpenLeetCodeSettings,
   onOpenLlmSettings,
-  onSync
+  onSync,
+  onToggleTutor
 }) {
   return (
     <header className="mb-8 flex items-center justify-between gap-4">
@@ -27,6 +29,17 @@ export default function Header({
           className="cursor-pointer rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 active:scale-95"
         >
           配置 LeetCode
+        </button>
+        <button
+          type="button"
+          onClick={onToggleTutor}
+          className={`cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium transition active:scale-95 ${
+            tutorOpen
+              ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+              : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+          }`}
+        >
+          🤖 AI 助教
         </button>
         <button
           type="button"

@@ -100,4 +100,56 @@ describe('TutorDrawer', () => {
       expect(mockApi.tutorSummarize).toHaveBeenCalledWith('s1');
     });
   });
+
+  it('does not crash when history loads during streaming (S.id regression)', async () => {
+    // 模拟：流式回复进行中，历史请求延迟返回并覆盖消息数组
+    let resolveHistory;
+    mockApi.tutorHistory.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveHistory = resolve;
+      })
+    );
+    // 流式回调分批推送，制造"流式中历史覆盖"的竞态
+    mockApi.tutorChatStream.mockImplementationOnce(async (sessionId, message, onDelta) => {
+      onDelta('第一条');
+      // 历史加载完成，覆盖消息数组（旧代码此处产生稀疏数组）
+      resolveHistory([{ role: 'user', content: '旧历史' }]);
+      await new Promise((r) => setTimeout(r, 10));
+      onDelta('第二条');
+    });
+
+    render(<TutorDrawer open onClose={() => {}} llmConfigured onNotice={() => {}} />);
+    await waitFor(() => expect(screen.getByPlaceholderText(/输入问题/)).toBeTruthy());
+
+    const textarea = screen.getByPlaceholderText(/输入问题/);
+    fireEvent.change(textarea, { target: { value: '你好' } });
+    fireEvent.click(screen.getByText('发送'));
+
+    // 关键断言：不抛异常，且流式内容正常渲染（而非 S.id undefined 崩溃）
+    await waitFor(() => {
+      expect(screen.getByText(/第一条/)).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/第二条/)).toBeTruthy();
+    });
+    // 旧历史保留
+    expect(screen.getByText('旧历史')).toBeTruthy();
+  });
+
+  it('renders markdown and code blocks', async () => {
+    mockApi.tutorHistory.mockResolvedValue([
+      {
+        role: 'assistant',
+        content: '**加粗文字**\n```java\nint x = 1;\n```\n- 列表项一\n- 列表项二'
+      }
+    ]);
+    render(<TutorDrawer open onClose={() => {}} llmConfigured onNotice={() => {}} />);
+    await waitFor(() => {
+      expect(screen.getByText('加粗文字')).toBeTruthy();
+    });
+    expect(screen.getByText('int x = 1;')).toBeTruthy();
+    expect(screen.getByText('列表项一')).toBeTruthy();
+    expect(screen.getByText('列表项二')).toBeTruthy();
+    expect(screen.getByText('java')).toBeTruthy();
+  });
 });

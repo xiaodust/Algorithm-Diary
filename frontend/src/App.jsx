@@ -371,7 +371,10 @@ export default function App() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="flex h-screen overflow-hidden">
+      {/* 左侧主内容区 */}
+      <div className="min-w-0 flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-6xl px-6 py-8">
       {busy && (
         <div className="fixed inset-x-0 top-0 z-50 h-1 overflow-hidden bg-indigo-100">
           <div className="h-full w-1/3 animate-pulse bg-indigo-500" />
@@ -383,9 +386,11 @@ export default function App() {
         llmSettings={llmSettings}
         syncing={syncing}
         switching={switching}
+        tutorOpen={showTutor}
         onOpenLeetCodeSettings={() => setShowSettings(true)}
         onOpenLlmSettings={() => setShowLlmSettings(true)}
         onSync={handleSync}
+        onToggleTutor={() => setShowTutor((v) => !v)}
       />
 
       {error && (
@@ -500,7 +505,21 @@ export default function App() {
         />
       )}
 
-      {/* AI 助教侧边栏 */}
+      {showCustomList && (
+        <CustomListModal
+          list={editingList}
+          saving={savingList}
+          onSave={handleSaveCustomList}
+          onClose={() => {
+            setShowCustomList(false);
+            setEditingList(null);
+          }}
+        />
+      )}
+        </div>
+      </div>
+
+      {/* 右侧 AI 助教面板（非覆盖式分栏） */}
       <TutorDrawer
         open={showTutor}
         onClose={() => setShowTutor(false)}
@@ -513,28 +532,6 @@ export default function App() {
         }
         onExplainHandled={handleExplainHandled}
       />
-
-      {/* 悬浮按钮 */}
-      <button
-        type="button"
-        onClick={() => setShowTutor((v) => !v)}
-        aria-label="打开 AI 算法助教"
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-indigo-600 text-2xl text-white shadow-lg transition hover:scale-105 hover:bg-indigo-500 active:scale-95"
-      >
-        🤖
-      </button>
-
-      {showCustomList && (
-        <CustomListModal
-          list={editingList}
-          saving={savingList}
-          onSave={handleSaveCustomList}
-          onClose={() => {
-            setShowCustomList(false);
-            setEditingList(null);
-          }}
-        />
-      )}
     </div>
   );
 }
