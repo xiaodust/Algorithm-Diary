@@ -127,5 +127,4 @@ GitHub Actions 会在推送到 `main` 时自动执行后端测试、前端构建
 
 - `backend/`：Spring Boot 服务
 - `frontend/`：React 界面
-- `docs/`：功能方案书（本地文档，不入库）
 - `.github/workflows/`：CI/CD 工作流
