@@ -22,8 +22,34 @@ export default function TutorDrawer({ open, onClose, llmConfigured, onNotice, ex
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
+  const [width, setWidth] = useState(420);
   const messagesRef = useRef(null);
   const explainedRef = useRef(null);
+  const dragRef = useRef(null);
+
+  // 拖拽拉伸宽度（左边缘手柄）
+  const startResize = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const startWidth = width;
+    const onMove = (ev) => {
+      const next = startWidth + (startX - ev.clientX);
+      setWidth(Math.min(680, Math.max(320, next)));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      dragRef.current = null;
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    dragRef.current = true;
+  };
 
   // 打开时加载会话列表
   useEffect(() => {
@@ -193,10 +219,19 @@ export default function TutorDrawer({ open, onClose, llmConfigured, onNotice, ex
 
   return (
     <aside
-      className={`flex h-full flex-col border-l border-slate-200 bg-white transition-all duration-300 ${
-        open ? 'w-[420px] max-w-[420px] opacity-100' : 'w-0 max-w-0 overflow-hidden opacity-0'
+      className={`fixed inset-y-0 right-0 z-40 flex flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
+        open ? 'translate-x-0' : 'translate-x-full'
       }`}
+      style={{ width }}
+      aria-hidden={!open}
     >
+      {/* 左边缘拖拽手柄 */}
+      <div
+        onMouseDown={startResize}
+        title="拖拽调整宽度"
+        className="absolute -left-1 top-0 h-full w-2 cursor-col-resize transition-colors hover:bg-indigo-200/60 active:bg-indigo-300/60"
+      />
+
       {/* 头部 */}
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <div className="relative">
